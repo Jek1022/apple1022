@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+{% load mathfilters %}
+<head>
+    {% load static %}
+    {% load humanize %}
+    {% load pdf_filters %}
+    {% load custom %}
+    <meta charset="UTF-8">
+    <title>{{ report_type }} {{ report_subtype }}</title>
+    <style>
+        @page {
+            size: LEGAL LANDSCAPE;
+            @frame header_frame {
+                -pdf-frame-content: header_content;
+                left: 1cm;
+                right: 1cm;
+                top: 1cm;
+                height: 5cm;
+            }
+            @frame footer_frame {
+                -pdf-frame-content: footer_content;
+                left: 1cm; right: 1cm; bottom: -3cm; height: 4cm;
+            }
+            @frame content_frame {
+                top: 6cm; left: 1cm; width: 33.5cm; height: 14.7cm;
+            }
+        }
+        body{
+            font-size: 12px;
+            font-family: 'Times New Roman';
+        }
+        .title{
+            font-size: 130%;
+            font-weight: bold;
+            font-family: 'Times New Roman';
+        }
+        .table {
+            width: 100%;
+            max-width: 100%;
+            margin-bottom: 5px;
+            background-color: #fff;
+        }
+        .table th {
+            vertical-align: top;
+            border-bottom: 2px solid #000;
+            text-align: center;
+            margin-bottom: 15px;
+            font-size:15px;
+        }
+        .td {
+            padding: 15px;
+            margin: 4px;
+            vertical-align: center;
+            text-align: center;
+        }
+
+        .table thead th {
+            vertical-align: bottom;
+            border-bottom: 2px solid #000;
+        }
+        .table tbody + tbody {
+            border-top: 2px solid #000;
+        }
+        .table .table {
+            background-color: #fff;
+        }
+        .list-group {
+            display: block;
+            width: 100%;
+            list-style: none;
+            margin-top: 15px;
+            margin-bottom: 15px;
+        }
+        .list-group p {
+            width: 100%;
+            height: 20px;
+            line-height: 20px;
+            list-style: none;
+            font-size: 1.1em;
+        }
+        .center {
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+
+<div id="header_content">
+    <div class="card">
+        <table>
+            <tr>
+                <td width="50%"><p class="title">{{ company.description|upper }}</p></td>
+                <td width="50%" colspan="2"><p class="center">{{ today|date:'M d, Y h:i:s A'}}</p></td>
+            </tr>
+            <tr>
+                <td width="50%"><p>{{ company.address1 }}</p></td>
+                <td width="25%" colspan="2"><p class="center">page: <pdf:pagenumber /> of <pdf:pagecount />   </p></td>
+            </tr>
+            <tr>
+                <td width="50%"><p>{{ company.address2 }}</p></td>
+                <td width="50%"></td>
+            </tr>
+            <tr>
+                <td width="50%"><p>VAT REG TIN: {{ company.tinnum }}</p></td>
+                <td width="50%"></td>
+            </tr>
+            <tr>
+                <td width="50%"></td>
+            </tr>
+            <tr>
+                <td width="80%"><p class="title">{{ title|upper }}</p></td>
+                <td width="10%"></td>
+            </tr>
+            <tr>
+                <td width="80%"><p>for the period {{ datefrom|date:'M d, Y' }} to {{ dateto|date:'M d, Y' }}</p></td>
+                <td width="10%"></td>
+            </tr>
+        </table>
+
+        <table class="table">
+            <thead>
+                <tr>
+                    <th style="text-align:left;width:240px;">Customer</th>
+                    <th style="text-align:left;width:140px;">Number</th>
+                    <th style="text-align:left;width:120px;">Date</th>
+                    <th style="text-align:left;width:150px;">Amount Due</th>
+                    <th style="text-align:left;width:150px;">&nbsp;&nbsp;Current</th>
+                    <th style="text-align:left;width:150px;">&nbsp;&nbsp;30 days</th>
+                    <th style="text-align:left;width:150px;">&nbsp;&nbsp;60 days</th>
+                    <th style="text-align:left;width:150px;">&nbsp;&nbsp;90 days</th>
+                    <th style="text-align:left;width:150px;">&nbsp;&nbsp;120 days</th>
+                    <th style="text-align:left;width:150px;">&nbsp;&nbsp;150 days</th>
+                    <th style="text-align:left;width:150px;">&nbsp;&nbsp;180 days</th>
+                    <th style="text-align:left;width:150px;">&nbsp;&nbsp;210 days</th>
+                    <th style="text-align:left;width:170px;">&nbsp;&nbsp;Over 210 days</th>
+                    <th style="text-align:left;width:150px;">&nbsp;&nbsp;Over-Payment</th>
+                </tr>
+            </thead>
+        </table>
+    </div>
+</div>
+<table id="content-data">
+    <tbody>
+        
+        {% for customer, customer_data in data.items %}
+            <tr>
+                <td style="text-align:left;vertical-align:top;width:240px;"><strong>{{ customer|default:"NO CUSTOMER/SUPPLIER" }}</strong></td>
+                <td style="text-align:left;vertical-align:top;width:140px;" colspan="13"></td>
+                
+            </tr>
+        
+            {% for item in customer_data.transactions %}
+                <tr>
+                    <td style="text-align:left;vertical-align:top;width:240px;"></td>
+                    <td style="text-align:left;vertical-align:top;width:140px;">{{ item.main_detail.document_type }}{{ item.main_detail.document_num }}</td>
+                    <td style="text-align:left;vertical-align:top;width:110px;">{{ item.main_detail.document_date|date:'Y-m-d' }}</td>
+                    
+                    {% comment %} {% if item.main_detail.document_refamount == 0 or item.main_detail.document_refamount == None %}
+                        <td style="text-align:right;vertical-align:top;width:150px;">{{ item.main_detail.creditamount|floatformat:2|intcomma }}</td>
+                    {% elif item.main_detail.document_refamount < 0 %}
+                        <td style="text-align:right;vertical-align:top;width:150px;">({{ item.main_detail.document_refamount|abs|floatformat:2|intcomma }})</td>
+                    {% else %}
+                        <td style="text-align:right;vertical-align:top;width:150px;">{{ item.main_detail.document_refamount|floatformat:2|intcomma }}</td>
+                    {% endif %} {% endcomment %}
+                    {% if item.main_detail.balancecode == 'D' %}
+                        <td style="text-align:right;vertical-align:top;width:150px;">{{ item.aging_detail.amount_due|floatformat:2|intcomma }}</td>
+                    {% else %}
+                        <td style="text-align:right;vertical-align:top;width:150px;">({{ item.aging_detail.amount_due|floatformat:2|intcomma }})</td>
+                    {% endif %}
+                    <td style="text-align:right;vertical-align:top;width:150px;">{{ item.aging_detail.current|floatformat:2|intcomma }}</td>
+                    <td style="text-align:right;vertical-align:top;width:150px;">{{ item.aging_detail.day30|floatformat:2|intcomma }}</td>
+                    <td style="text-align:right;vertical-align:top;width:150px;">{{ item.aging_detail.day60|floatformat:2|intcomma }}</td>
+                    <td style="text-align:right;vertical-align:top;width:150px;">{{ item.aging_detail.day90|floatformat:2|intcomma }}</td>
+                    <td style="text-align:right;vertical-align:top;width:150px;">{{ item.aging_detail.day120|floatformat:2|intcomma }}</td>
+                    <td style="text-align:right;vertical-align:top;width:150px;">{{ item.aging_detail.day150|floatformat:2|intcomma }}</td>
+                    <td style="text-align:right;vertical-align:top;width:150px;">{{ item.aging_detail.day180|floatformat:2|intcomma }}</td>
+                    <td style="text-align:right;vertical-align:top;width:150px;">{{ item.aging_detail.day210|floatformat:2|intcomma }}</td>
+                    <td style="text-align:right;vertical-align:top;width:150px;">{{ item.aging_detail.over210|floatformat:2|intcomma }}</td>
+                    <td style="text-align:right;vertical-align:top;width:150px;">({{ item.aging_detail.overpayment|floatformat:2|intcomma }})</td>
+                    
+                </tr>
+            {% endfor %}
+            <tr>
+                <td style="text-align:left;vertical-align:top;width:240px;"></td>
+                <td style="text-align:left;vertical-align:top;width:140px;padding-top:4px;"><i>Subtotal</i></td>
+                <td style="text-align:left;vertical-align:top;width:110px;"></td>
+                {% if customer_data.subtotal.amount_due < 0 %}
+                    <td style="text-align:right;vertical-align:top;width:150px;border-top: 1px solid black;padding-top:4px;">({{ customer_data.subtotal.amount_due|abs|floatformat:2|intcomma }})</td>
+                {% else %}
+                    <td style="text-align:right;vertical-align:top;width:150px;border-top: 1px solid black;padding-top:4px;">{{ customer_data.subtotal.amount_due|floatformat:2|intcomma }}</td>
+                {% endif %}
+                <td style="text-align:right;vertical-align:top;width:150px;border-top: 1px solid black;padding-top:4px;">{{ customer_data.subtotal.current|floatformat:2|intcomma }}</td>
+                <td style="text-align:right;vertical-align:top;width:150px;border-top: 1px solid black;padding-top:4px;">{{ customer_data.subtotal.day30|floatformat:2|intcomma }}</td>
+                <td style="text-align:right;vertical-align:top;width:150px;border-top: 1px solid black;padding-top:4px;">{{ customer_data.subtotal.day60|floatformat:2|intcomma }}</td>
+                <td style="text-align:right;vertical-align:top;width:150px;border-top: 1px solid black;padding-top:4px;">{{ customer_data.subtotal.day90|floatformat:2|intcomma }}</td>
+                <td style="text-align:right;vertical-align:top;width:150px;border-top: 1px solid black;padding-top:4px;">{{ customer_data.subtotal.day120|floatformat:2|intcomma }}</td>
+                <td style="text-align:right;vertical-align:top;width:150px;border-top: 1px solid black;padding-top:4px;">{{ customer_data.subtotal.day150|floatformat:2|intcomma }}</td>
+                <td style="text-align:right;vertical-align:top;width:150px;border-top: 1px solid black;padding-top:4px;">{{ customer_data.subtotal.day180|floatformat:2|intcomma }}</td>
+                <td style="text-align:right;vertical-align:top;width:150px;border-top: 1px solid black;padding-top:4px;">{{ customer_data.subtotal.day210|floatformat:2|intcomma }}</td>
+                <td style="text-align:right;vertical-align:top;width:150px;border-top: 1px solid black;padding-top:4px;">{{ customer_data.subtotal.over210|floatformat:2|intcomma }}</td>
+                <td style="text-align:right;vertical-align:top;width:150px;border-top: 1px solid black;padding-top:4px;">({{ customer_data.subtotal.overpayment|abs|floatformat:2|intcomma }})</td>
+                
+            </tr>
+        {% endfor %}
+        <tr>
+            <td style="text-align:left;vertical-align:top;width:240px;"></td>
+            <td style="text-align:left;vertical-align:top;width:140px;padding-top:4px;"><i>Grand Total</i></td>
+            <td style="text-align:left;vertical-align:top;width:110px;"></td>
+            <td style="text-align:right;vertical-align:top;width:150px;border-top: 1px solid black;padding-top:4px;">{{ grandtotal.amount_due }}</td>
+            <td style="text-align:right;vertical-align:top;width:150px;border-top: 1px solid black;padding-top:4px;">{{ grandtotal.current }}</td>
+            <td style="text-align:right;vertical-align:top;width:150px;border-top: 1px solid black;padding-top:4px;">{{ grandtotal.day30 }}</td>
+            <td style="text-align:right;vertical-align:top;width:150px;border-top: 1px solid black;padding-top:4px;">{{ grandtotal.day60 }}</td>
+            <td style="text-align:right;vertical-align:top;width:150px;border-top: 1px solid black;padding-top:4px;">{{ grandtotal.day90 }}</td>
+            <td style="text-align:right;vertical-align:top;width:150px;border-top: 1px solid black;padding-top:4px;">{{ grandtotal.day120 }}</td>
+            <td style="text-align:right;vertical-align:top;width:150px;border-top: 1px solid black;padding-top:4px;">{{ grandtotal.day150 }}</td>
+            <td style="text-align:right;vertical-align:top;width:150px;border-top: 1px solid black;padding-top:4px;">{{ grandtotal.day180 }}</td>
+            <td style="text-align:right;vertical-align:top;width:150px;border-top: 1px solid black;padding-top:4px;">{{ grandtotal.day210 }}</td>
+            <td style="text-align:right;vertical-align:top;width:150px;border-top: 1px solid black;padding-top:4px;">{{ grandtotal.over210 }}</td>
+            <td style="text-align:right;vertical-align:top;width:150px;border-top: 1px solid black;padding-top:4px;">{{ grandtotal.overpayment }}</td>
+            
+        </tr>
+    </tbody>
+</table>
+
+<div id="footer_content" style="text-align:right">
+    <p class="right">{{ company.report_footer14 }} / {{ username  }}</p>
+</div>
+
+</body>
+</html>

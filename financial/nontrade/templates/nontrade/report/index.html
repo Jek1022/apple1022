@@ -48,11 +48,11 @@
                                 <div class="input-daterange datarange">
                                     <div class="input-group">
                                         <span class="input-group-addon input-sm"><i class="icon md-calendar" aria-hidden="true"></i></span>
-                                        <input type="text" class="form-control input-sm datepickerfrom" id="dfrom" value="2019-01-01">
+                                        <input type="text" class="form-control input-sm datepickerfrom" id="dfrom">
                                     </div>
                                     <div class="input-group">
                                         <span class="input-group-addon input-sm">to</span>
-                                        <input type="text" class="form-control input-sm datepickerto" id="dto" value="2024-09-30">
+                                        <input type="text" class="form-control input-sm datepickerto" id="dto">
                                     </div>
                                 </div>
                             </div>
@@ -73,18 +73,6 @@
                                 </select>
                             </div>
                             <div class="form-group col-sm-3">
-                                <label class="control-label small">Classification</label>
-                                <select class="form-control input-sm" id="classification">
-                                    <option value="1">Sorted by transaction date, transaction number with no grouping</option>
-                                    <option value="2">Sorted by supplier, transaction date, transaction number with grouping based on supplier</option>
-                                    <option value="3">Sorted by supplier, ref type/number/date, transaction date, transaction number with grouping based on supplier</option>
-                                </select>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="row">
-                        <div class="col-md-12">
-                            <div class="form-group col-sm-3">
                                 <label class="control-label small">Type</label>
                                 <select class="form-control input-sm" id="report">
                                     <option value="1">List of Outstanding Non-Trade Receivable</option>
@@ -92,6 +80,11 @@
                                     <option value="3">Sales Book for Outstanding Non-Trade Receivable</option>
                                 </select>
                             </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-12">
+                            
                             <div class="form-group col-sm-2">
                                 <label class="control-label small">Code [Customer/Supplier]</label><br>
                                 <input type="text" class="form-control input-sm" id="customercode">
@@ -103,9 +96,6 @@
                             <div class="form-group col-sm-3">
                                 <a class="btn btn-primary waves-effect waves-dark" id="generate" style="margin-top: 22px; width: 30%;">
                                     <i class="icon fa-file-search-o" aria-hidden="true"></i>&nbsp;&nbsp;Generate
-                                </a>
-                                <a class="btn btn-danger waves-effect waves-dark" id="pdf" style="margin-top: 22px; width: 30%;display:none">
-                                    <i class="icon fa-file-pdf-o" aria-hidden="true"></i>&nbsp;&nbsp;PDF
                                 </a>
                                 <a class="btn btn-info waves-effect waves-dark" id="excel" style="margin-top: 22px; width: 30%;">
                                     <i class="icon fa-file-excel-o" aria-hidden="true"></i>&nbsp;&nbsp;Excel
@@ -150,62 +140,38 @@
             $('.t'+v).show();
         });
 
-        $('#report').on('change', function() {
-            var v = $(this).val();
-            $('#excel').show();
-            if (v == 2 || v == 3) {
-                $('#pdf').show();
-                if (v == 3) {
-                    $('#excel').hide();
-                }
-            } else {
-                $('#pdf').hide();
-
-            }
-        });
-
         $('#generate').on('click', function(e) {
             e.preventDefault();
-            try {
-                $(this).text("Loading...");
-                var dfrom = $('#dfrom').val();
-                var dto = $('#dto').val();
-                var chartofaccount = $('#chartofaccount').val();
-                var transaction = $('#transaction').val();
-                var classification = $('#classification').val();
-                var customercode = $('#customercode').val();
-                var customername = $('#customername').val();
-                var report = $('#report').val();
-                console.log('coa', chartofaccount);
-                if (dfrom == '' || dto == '') {
-                    alert('Transaction Date must not be empty');
+            $(this).text("Loading...");
+            var dfrom = $('#dfrom').val();
+            var dto = $('#dto').val();
+            var chartofaccount = $('#chartofaccount').val();
+            var transaction = $('#transaction').val();
+            var classification = $('#classification').val();
+            var customercode = $('#customercode').val();
+            var customername = $('#customername').val();
+            var report = $('#report').val();
+            
+            if (dfrom == '' || dto == '') {
+                alert('Transaction Date must not be empty');
+                $('#generate').text("Generate");
+                return false;
+            }
+
+            if (report == 1 || report == 2 || report == 3) {
+                if (transaction != 1) {
+                    alert('Transaction does not match with Type');
+                    $('#generate').text("Generate");
                     return false;
                 }
 
-                if (report == 1) {
-                    if (transaction != 1) {
-                        alert('Transaction does not match with Type');
-                        return false;
-                    }
-                    if (chartofaccount == ''){
-                        if(customercode == '' && customername == ''){
-                            alert('Please select Chart of Account or Customer Code/Name');
-                            return false;
-                        }
-                    }
-                    if(customercode == '' && customername == ''){
-                        if(chartofaccount == ''){
-                            alert('Please select Chart of Account');
-                            return false;
-                        }
-                    }
-
-                    url = "{% url 'nontrade:pdf2' %}"+"?report="+report+"&from="+dfrom+"&to="+dto+"&chartofaccount="+chartofaccount+"&transaction="+transaction+"&classification="+classification+"&customercode="+customercode+"&customername="+customername;
-                    $('#iframe').prop('src', url);
-                } else {
-                    alert('Please select report Type');
-                }
-            } finally {
+                url = "{% url 'nontrade:pdf2' %}"+"?report="+report+"&from="+dfrom+"&to="+dto+"&chartofaccount="+chartofaccount+"&transaction="+transaction+"&classification="+classification+"&customercode="+customercode+"&customername="+customername;
+                $('#iframe').prop('src', url);
+                $('#iframe').load(function(){
+                    $('#generate').text("Generate");
+                });
+            } else {
+                alert('Please select report Type');
                 $('#generate').text("Generate");
             }
         });
@@ -218,8 +184,8 @@
             var chartofaccount = $('#chartofaccount').val();
             var transaction = $('#transaction').val();
             var classification = $('#classification').val();
-            var customercode = $('#customercode').val();
-            var customername = $('#customername').val();
+            var payeecode = $('#customercode').val();
+            var payeename = $('#customername').val();
             var report = $('#report').val();
 
             if (dfrom == '' || dto == '') {
@@ -227,27 +193,22 @@
                 return false;
             }
 
-            if (report == 2) {
-                if (chartofaccount == '') {
-                    alert('Please select Chart of Account');
+            if (report == 1 || report == 2 || report == 3) {
+                if (transaction != 1) {
+                    alert('Transaction does not match with Type');
+                    $('#generate').text("Generate");
                     return false;
                 }
-            } else if (report == 3) {
-                if (chartofaccount == '') {
-                    alert('Please select Chart of Account');
-                    return false;
-                }
-
-                if (customercode == '' || customername) {
-                    alert('Please enter Supplier/Customer Code or Name');
-                    return false;
-                }
-
+                
+            } else {
+                alert('Please select report Type');
+                $('#generate').text("Generate");
+                return false;
             }
             console.log('excel');
-            url = "{% url 'nontrade:transexcel' %}"+"?report="+report+"&transaction="+transaction+"&dfrom="+dfrom+"&dto="+dto+"&chartofaccount="+chartofaccount+"&classification="+classification+"&customercode="+customercode+"&customername="+customername;
-            <!--$('#result').prop('src', url);-->
-            location.href = url
+            url = "{% url 'nontrade:transexcelreport' %}"+"?report="+report+"&transaction="+transaction+"&dfrom="+dfrom+"&dto="+dto+"&chartofaccount="+chartofaccount+"&transaction="+transaction+"&classification="+classification+"&payeecode="+payeecode+"&payeename="+payeename;
+            
+            location.href = url;
         });
 
         $('#pdf').on('click', function() {
