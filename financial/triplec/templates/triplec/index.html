@@ -518,7 +518,8 @@
 <div id="upload-form-required" class="custom-alert danger">File is required.</div>
 <div id="upload-file-incorrect" class="custom-alert danger">File must be XLS or XLSX.</div>
 <div id="upload-file-size" class="custom-alert danger">File size is too large.</div>
-<div id="upload-file-error" class="custom-alert danger">An error occured.</div>
+<div id="upload-file-error" class="custom-alert danger">An error occurred.</div>
+<div id="exception" class="custom-alert danger">An exception error occurred.</div>
 
 <div id="custom-success-alert" class="custom-alert success"></div>
 <div id="custom-failed-alert" class="custom-alert danger"></div>
@@ -552,7 +553,7 @@
 
         $('form#data').submit(function(e){
             e.preventDefault();
-	        
+            
             var formData = new FormData();
             formData.append('data_file', $('#data_file')[0].files[0]); // Append the selected file
             $.ajax({
@@ -564,20 +565,22 @@
                 contentType: false,
                 processData: false,
                 success: function (data) {
-                    $('#fileUploadInput').fadeOut(300);
-                    $('#fileUploadProcessing').fadeOut(300);
-                    $('#fileUploadSubmit').fadeOut(300);
+                    $('#fileUploadProcessing').fadeOut();
                     $('form#data').trigger('reset');
+                    $('#fileUploadSubmit').fadeIn(500);
                     switch(data['result']) {
                         case 1:
                             customAlert($('#upload-success'));
-                            $('#uploadModal').modal('toggle');
+                            // $('#uploadModal').modal('toggle');
                             break;
                         case 2:
                             if(data['records_count'] == data['failed_data'].length){
-                                $('#uploadModal').modal('toggle');
                                 customAlert($('#upload-file-exist'));
+                                // $('#uploadModal').modal('toggle');
                             } else {
+                                $('#fileUploadInput').fadeOut(300);
+                                $('#fileUploadSubmit').fadeOut(300);
+                                
                                 $('#data_summary').fadeIn();
                                 $('#fileReloadPage').fadeIn();
                                 datasummary(data);
@@ -585,24 +588,27 @@
                             break;
                         case 3:
                             customAlert($('#upload-failed'));
-                            $('#uploadModal').modal('toggle');
+                            // $('#uploadModal').modal('toggle');
                             break;
                         case 4:
                             customAlert($('#upload-file-incorrect'));
-                            $('#uploadModal').modal('toggle');
+                            // $('#uploadModal').modal('toggle');
                             break;
                         case 5:
                             customAlert($('#upload-file-size'));
-                            $('#uploadModal').modal('toggle');
+                            // $('#uploadModal').modal('toggle');
+                            break;
+                        case 6:
+                            customAlert($('#exception'));
+                            // $('#uploadModal').modal('toggle');
                             break;
                         default:
                             customAlert($('#upload-file-error'));
                     }
                 }
             });
-	        
-			return false;
-	    });
+            return false;
+        });
 
         function datasummary(data){
 
@@ -934,8 +940,8 @@
 
                         if (response.result === true){
                             custom_success_alert('Transaction saved successfully');
-                           $("#btn_manual_reset").click();
-                           $("#btn_manual_close").click();
+                            $("#btn_manual_reset").click();
+                            $("#btn_manual_close").click();
                         } else {
                             custom_failed_alert(response.message);
                         }

@@ -166,8 +166,9 @@ def fileprocess(request):
 @csrf_exempt
 def upload(request):
     if request.method == 'POST':
+        # try:
         doc = request.FILES
-        if doc['data_file'].name.endswith('.xls'):
+        if doc['data_file'].name.endswith('.xlsx') or doc['data_file'].name.endswith('.xls'):
             if doc['data_file']._size < float(upload_size) * 1024 * 1024:
                 records = fileprocess(request)
                 records_count = len(records)
@@ -187,7 +188,7 @@ def upload(request):
                         successcount += 1
                     else:
                         failedcount += 1
-                        faileddata.append([issue_date, record['Article ID'], record['Article Title'], record['Numberofwords'], record['NumberofCharacters'], errorsavingdata, textwarning])
+                        faileddata.append([issue_date, record['Article ID'], record['Article Title'], record['Number Of words'], record['NumberofCharacters'], errorsavingdata, textwarning])
                 
                 if successcount == records_count:
                     result = 1 
@@ -211,6 +212,11 @@ def upload(request):
         return JsonResponse({
             'result': 4
         })
+        # except Exception as e:
+        #     print 'error', e
+        #     return JsonResponse({
+        #         'result': 6
+        #     })
     else:
         context = {}
         return render(request, 'triplec/upload.html', context)
@@ -228,7 +234,7 @@ def strip_non_ascii(string):
 def savedata(record,issue_date):
     try:
         article_title = strip_non_ascii(record['Article Title']) if record['Article Title'] else ''
-        # byline = strip_non_ascii(record['Byline'])
+        byline = strip_non_ascii(record['Byline'])
         created_by = strip_non_ascii(record['Created by']) if record['Created by'] else ''
 
         TripleC.objects.create(
@@ -239,10 +245,10 @@ def savedata(record,issue_date):
             cms_page=str(record['Page']) if record['Page'] else '',
             cms_article_id=str(record['Article ID']) if record['Article ID'] else '',
             cms_article_title=article_title,
-            cms_byline='',
+            cms_byline=byline,
             cms_author_name=str(record['Author name']),
             cms_created_by=created_by,
-            cms_no_of_words=int(record['Numberofwords']) if record['Numberofwords'] else 0,
+            cms_no_of_words=int(record['Number Of words']) if record['Number Of words'] else 0,
             cms_no_of_characters=int(record['NumberofCharacters']) if record['NumberofCharacters'] else 0
         )
         return True
