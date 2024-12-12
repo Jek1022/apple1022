@@ -2595,14 +2595,14 @@ def gopostjv(request):
                 jvnum = jvnum,
                 jvdate = pdate,
                 jvtype_id = 1, # No JV Type - CHANGE THIS
-                jvsubtype_id = 20, # Manual JV - CHANGE THIS
+                jvsubtype_id = 20, # SI-Non Trade
                 branch_id = 5, # Head Office
                 refnum = sinum,
                 particular = '[SI'+str(sinum)+ '] '+ entries[0]['simain__particulars'],
                 currency_id = 1,
                 fxrate = 1,
-                designatedapprover_id = 356, # Edsa Lanuza
-                actualapprover_id = 356, # Edsa Lanuza
+                designatedapprover_id = 339, # jadejesus
+                actualapprover_id = 339, # jadejesus
                 approverremarks = 'Auto approved from SI Posting',
                 responsedate = datetime.datetime.now(),
                 jvstatus = 'A',
