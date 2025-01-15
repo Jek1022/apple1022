@@ -1,8 +1,8 @@
 {% for item in data %}
-<tr>
-  <th><input type="checkbox" class="check" value={{ item.id }}></th>
-  <td>{{ item.sinum }}</td>
-  <td>{{ item.sidate|date:'Y-m-d' }}</td>
-  <td>[{{ item.customer.code }}] {{ item.customer.name }}</td>
+<tr {% if item.validated  == 0 %} class="bg-warning text-primary" title="System detected late transaction for posting." {% else %} title="Select" {% endif %}>
+  <th><input type="checkbox" class="check" id="item_{{ item.id }}" value="{{ item.id }}"></th>
+  <td><label for="item_{{ item.id }}">{{ item.sinum }}</label></td>
+  <td><label for="item_{{ item.id }}">{{ item.sidate|date:'Y-m-d' }}</label></td>
+  <td><label for="item_{{ item.id }}">[{{ item.customer.code }}] {{ item.customer.name }}</label></td>
 </tr>
 {% endfor %}

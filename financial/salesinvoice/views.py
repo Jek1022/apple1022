@@ -18,7 +18,6 @@ from acctentry.views import generatekey, querystmtdetail, querytotaldetail, save
 from customer.models import Customer
 from sitype.models import Sitype
 from sisubtype.models import Sisubtype
-from subledger.models import Subledger
 from outputvattype.models import Outputvattype
 # from processing_or.models import Logs_simain, Logs_sidetail
 from vat.models import Vat
@@ -2511,30 +2510,66 @@ def generatedefaultentries(request):
 
 @csrf_exempt
 def searchforpostingJV(request):
-    if request.method == 'POST':
+    try:
+        if request.method == 'POST':
 
-        dfrom = request.POST['dfrom']
-        dto = request.POST['dto']
-        if dfrom and dto:
-            q = Simain.objects.filter(sidate__gte=dfrom, sidate__lte=dto, isdeleted=0, status='A', sistatus='R').exclude(jvmain_id__isnull=False).order_by('sinum', 'sidate')
-
-            context = {
-                'data': q
-            }
-            data = {
-                'status': 'success',
-                'viewhtml': render_to_string('salesinvoice/jvpostingresult.html', context),
-            }
+            dfrom = request.POST['dfrom']
+            dto = request.POST['dto']
+            if dfrom and dto:
+                q = Simain.objects.filter(sidate__gte=dfrom, sidate__lte=dto, isdeleted=0, status='A', sistatus='R').exclude(jvmain_id__isnull=False).order_by('sinum', 'sidate')
+                
+                result = []
+                for item in q:
+                    
+                    sidate_month = str(item.sidate.strftime('%m'))
+                    sidate_year = str(item.sidate.year)
+                    sidate_yearmonth = sidate_year + sidate_month
+                    
+                    validated = validate_late_posting(sidate_yearmonth)
+                    
+                    item.validated = validated
+                    result.append(item)
+                    
+                context = {
+                    'data': result
+                }
+                data = {
+                    'status': 'success',
+                    'viewhtml': render_to_string('salesinvoice/jvpostingresult.html', context),
+                }
+            else:
+                data = {
+                    'status': 'error',
+                }
         else:
             data = {
                 'status': 'error',
             }
-    else:
+    except Exception as e:
         data = {
-            'status': 'error',
+            'status': 'exception',
+            'message': 'Exception error'+ str(e)
         }
 
     return JsonResponse(data)
+
+
+def validate_late_posting(sidate_yearmonth):
+    today = dt.now()
+    today_year = str(today.year)
+    today_month = str(today.strftime('%m'))
+    today_yearmonth = today_year + today_month
+    
+    diff = int(today_yearmonth) - int(sidate_yearmonth)
+    print 'diff', diff
+    
+    # diff = 0 means current month, 
+    # diff = 1 means previous month, 
+    # diff = 89 means previous month (December) of previous year [e.g. 202501 - 202412 = 89]
+    if diff <= 1 or diff == 89:
+        return 1
+    else:
+        return 0
 
 
 def lastJVNumber(param):
@@ -2563,98 +2598,115 @@ def gopostjv(request):
         pdate = request.POST['postdate']
             
         counter = 1
+        late_count = 0
         amount = 0
             
         for id in ids:
-            entries = Sidetail.objects.filter(simain_id=id, isdeleted=0).exclude(simain__status='C')
-        
-            entries = entries.values('si_num', 'simain__particulars', 'chartofaccount__accountcode','chartofaccount__description', 'balancecode', \
-                'ataxcode_id', 'bankaccount_id', 'branch_id', 'chartofaccount_id', 'customer_id', 'department_id', \
-                    'employee_id', 'inputvat_id', 'outputvat_id', 'product_id', 'unit_id', 'vat_id', 'wtax_id') \
-            .annotate(Sum('debitamount'), Sum('creditamount'),
-                        debitdifference=Case(When(debitamount__sum__lt=F('creditamount__sum'), then=Value(0)),
-                                            default=Sum('debitamount') - Sum('creditamount')),
-                        creditdifference=Case(When(creditamount__sum__lt=F('debitamount__sum'), then=Value(0)),
-                                            default=Sum('creditamount') - Sum('debitamount'))) \
-            .order_by('chartofaccount__accountcode')
             
-            jvnumlast = lastJVNumber('true')
-            latestjvnum = str(jvnumlast[0])
-            jvnum = pdate[:4]
-            last = str(int(latestjvnum) + 1)
-            zero_addon = 6 - len(last)
-            for num in range(0, zero_addon):
-                jvnum += '0'
-            jvnum += last
+            sidate = Simain.objects.get(pk=id).sidate
+            sidate_month = str(sidate.strftime('%m'))
+            sidate_year = str(sidate.year)
+            
+            sidate_yearmonth = sidate_year + sidate_month
+            validated = validate_late_posting(sidate_yearmonth)
+            
+            if validated == 1:
+            
+                entries = Sidetail.objects.filter(simain_id=id, isdeleted=0).exclude(simain__status='C')
+            
+                entries = entries.values('si_num', 'simain__particulars', 'chartofaccount__accountcode','chartofaccount__description', 'balancecode', \
+                    'ataxcode_id', 'bankaccount_id', 'branch_id', 'chartofaccount_id', 'customer_id', 'department_id', \
+                        'employee_id', 'inputvat_id', 'outputvat_id', 'product_id', 'unit_id', 'vat_id', 'wtax_id') \
+                .annotate(Sum('debitamount'), Sum('creditamount'),
+                            debitdifference=Case(When(debitamount__sum__lt=F('creditamount__sum'), then=Value(0)),
+                                                default=Sum('debitamount') - Sum('creditamount')),
+                            creditdifference=Case(When(creditamount__sum__lt=F('debitamount__sum'), then=Value(0)),
+                                                default=Sum('creditamount') - Sum('debitamount'))) \
+                .order_by('chartofaccount__accountcode')
+                
+                jvnumlast = lastJVNumber('true')
+                latestjvnum = str(jvnumlast[0])
+                jvnum = pdate[:4]
+                last = str(int(latestjvnum) + 1)
+                zero_addon = 6 - len(last)
+                for num in range(0, zero_addon):
+                    jvnum += '0'
+                jvnum += last
 
-            # strpdate = dt.strptime(pdate, '%Y-%m-%d')
-            sinum = entries[0]['si_num']
-            # billingremarks = ''
-            
-            main = Jvmain.objects.create(
-                jvnum = jvnum,
-                jvdate = pdate,
-                jvtype_id = 1, # No JV Type - CHANGE THIS
-                jvsubtype_id = 20, # SI-Non Trade
-                branch_id = 5, # Head Office
-                refnum = sinum,
-                particular = '[SI'+str(sinum)+ '] '+ entries[0]['simain__particulars'],
-                currency_id = 1,
-                fxrate = 1,
-                designatedapprover_id = 339, # jadejesus
-                actualapprover_id = 339, # jadejesus
-                approverremarks = 'Auto approved from SI Posting',
-                responsedate = datetime.datetime.now(),
-                jvstatus = 'A',
-                enterby_id = request.user.id,
-                enterdate = datetime.datetime.now(),
-                modifyby_id = request.user.id,
-                modifydate = datetime.datetime.now()
-            )
-            
-            for entry in entries:
-                amount += entry['debitdifference']
-                Jvdetail.objects.create(
-                    jvmain_id = main.id,
-                    jv_num = main.jvnum,
-                    jv_date = main.jvdate,
-                    item_counter = counter,
-                    debitamount = entry['debitdifference'],
-                    creditamount = entry['creditdifference'],
-                    balancecode = entry['balancecode'],
-                    ataxcode_id = entry['ataxcode_id'],
-                    bankaccount_id = entry['bankaccount_id'],
-                    branch_id = entry['branch_id'],
-                    chartofaccount_id = entry['chartofaccount_id'],
-                    customer_id = entry['customer_id'],
-                    department_id = entry['department_id'],
-                    employee_id = entry['employee_id'],
-                    inputvat_id = entry['inputvat_id'],
-                    outputvat_id = entry['outputvat_id'],
-                    product_id = entry['product_id'],
-                    unit_id = entry['unit_id'],
-                    vat_id = entry['vat_id'],
-                    wtax_id = entry['wtax_id'],
-                    status='A',
+                # strpdate = dt.strptime(pdate, '%Y-%m-%d')
+                sinum = entries[0]['si_num']
+                # billingremarks = ''
+                
+                main = Jvmain.objects.create(
+                    jvnum = jvnum,
+                    jvdate = pdate,
+                    jvtype_id = 1, # No JV Type - CHANGE THIS
+                    jvsubtype_id = 20, # SI-Non Trade
+                    branch_id = 5, # Head Office
+                    refnum = sinum,
+                    particular = '[SI'+str(sinum)+ '] '+ entries[0]['simain__particulars'],
+                    currency_id = 1,
+                    fxrate = 1,
+                    designatedapprover_id = 339, # jadejesus
+                    actualapprover_id = 339, # jadejesus
+                    approverremarks = 'Auto approved from SI Posting',
+                    responsedate = datetime.datetime.now(),
+                    jvstatus = 'A',
                     enterby_id = request.user.id,
                     enterdate = datetime.datetime.now(),
                     modifyby_id = request.user.id,
                     modifydate = datetime.datetime.now()
                 )
-                counter += 1
-            
-            Simain.objects.filter(pk=id).update(
-                jvmain_id = main.id,
-                remarks = 'Sales Invoice ['+str(sinum)+']'
-            )
-            
-            main.amount = amount
-            main.save()
-            
-            amount = 0
-            counter = 0
+                
+                for entry in entries:
+                    amount += entry['debitdifference']
+                    Jvdetail.objects.create(
+                        jvmain_id = main.id,
+                        jv_num = main.jvnum,
+                        jv_date = main.jvdate,
+                        item_counter = counter,
+                        debitamount = entry['debitdifference'],
+                        creditamount = entry['creditdifference'],
+                        balancecode = entry['balancecode'],
+                        ataxcode_id = entry['ataxcode_id'],
+                        bankaccount_id = entry['bankaccount_id'],
+                        branch_id = entry['branch_id'],
+                        chartofaccount_id = entry['chartofaccount_id'],
+                        customer_id = entry['customer_id'],
+                        department_id = entry['department_id'],
+                        employee_id = entry['employee_id'],
+                        inputvat_id = entry['inputvat_id'],
+                        outputvat_id = entry['outputvat_id'],
+                        product_id = entry['product_id'],
+                        unit_id = entry['unit_id'],
+                        vat_id = entry['vat_id'],
+                        wtax_id = entry['wtax_id'],
+                        status='A',
+                        enterby_id = request.user.id,
+                        enterdate = datetime.datetime.now(),
+                        modifyby_id = request.user.id,
+                        modifydate = datetime.datetime.now()
+                    )
+                    counter += 1
+                
+                Simain.objects.filter(pk=id).update(
+                    jvmain_id = main.id,
+                    remarks = 'Sales Invoice ['+str(sinum)+']'
+                )
+                
+                main.amount = amount
+                main.save()
+                
+                amount = 0
+                counter = 0
+                
+            else:
+                late_count += 1
 
-        data = {'status': 'success'}
+        data = {
+            'status': 'success',
+            'late_count': late_count
+        }
     else:
         data = { 'status': 'error' }
 

@@ -172,7 +172,7 @@
                         <div class="form-group col-sm-2 padding-top-30"><span id="wtaxrate" class="text-success small small"><strong>RATE: 00.00%</strong></span></div>
                         <div class="form-group col-sm-3 {{ form.wtaxamount.errors|yesno:'has-error,' }}">
                             <label class="control-label" for="id_wtaxamount">WTAX Amount</label>
-                            <input type="text" class="form-control input-sm amount" id="id_wtaxamount" style="text-align: right;" data-validation="required" value="{{ form.wtaxamount.value|default:'' }}" name="wtaxamount">
+                            <input type="number" class="form-control input-sm amount" id="id_wtaxamount" style="text-align: right;" data-validation="required" value="{{ form.wtaxamount.value|default:'0.00' }}" name="wtaxamount">
                             <span class="help-block form-error">{{ form.wtaxamount.errors.as_text }}</span>
                         </div>
                     </div>
