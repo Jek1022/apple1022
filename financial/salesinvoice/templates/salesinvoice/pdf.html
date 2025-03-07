@@ -100,7 +100,7 @@
 </div>
 
 <div id="footer_content">
-    <table class="arial" style="font-size: 8.4px; margin-top: 10px;">
+    <table class="arial" style="font-size: 8.4px; margin-top: 10px; padding-top: 10px;">
         <tr>
             <td>
                 {{ parameter.report_footer1 }}<br>
@@ -184,7 +184,7 @@
                 <td colspan="2" >
                     <table style="padding-bottom: -5px;">
                         <tr>
-                            <td style="width: 110%">{{ detail.simain.particulars }}</td>
+                            <td style="width: 110%">{{ detail.simain.particulars | safe }}</td>
                         </tr>
                     </table>
                 </td>
